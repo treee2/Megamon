@@ -1,0 +1,74 @@
+.bookings-page {
+  padding: 1rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+.bookings-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.booking-card {
+  display: flex;
+  gap: 1rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  overflow: hidden;
+  padding: 0.75rem;
+  align-items: center;
+}
+
+.booking-image img {
+  width: 160px;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.booking-info h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.05rem;
+}
+
+.booking-details span {
+  margin-right: 0.75rem;
+  color: #555;
+}
+
+.booking-status {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.status-pending { background: #f59e0b !important; }
+.status-confirmed { background: #10b981 !important; }
+.status-cancelled { background: #ef4444 !important; }
+
+.bookings-loading, .bookings-empty {
+  padding: 2rem;
+  text-align: center;
+  color: #444;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(0,0,0,0.08);
+  border-top-color: #111827;
+  margin: 0 auto 1rem auto;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
