@@ -38,19 +38,32 @@
 import { useEffect, useState } from 'react';
 import PropertySwiper from './components/PropertySwiper';
 import BookingsPage from './components/BookingsPage';
-import type { Property } from './types';
+import RegistrationPage from './components/RegistrationPage';
+import type { Property, User } from './types';
 import './App.css';
 
 function App() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState<'home' | 'bookings'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'bookings' | 'auth'>('home');
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const webApp = window.Telegram?.WebApp;
     if (webApp) {
       webApp.ready();
       webApp.expand();
+    }
+
+    // Проверяем, есть ли сохраненный пользователь
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (error) {
+        console.error('Ошибка парсинга пользователя:', error);
+        localStorage.removeItem('user');
+      }
     }
 
     loadProperties();
@@ -68,6 +81,12 @@ function App() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    setUser(null);
+    setCurrentPage('home');
+  };
+
   if (loading) {
     return (
       <div className="loading">
@@ -79,15 +98,45 @@ function App() {
 
   return (
     <div className="app">
-      {currentPage === 'home' ? (
+      {currentPage === 'auth' ? (
         <>
-          <PropertySwiper properties={properties} />
           <button 
-            className="bookings-btn"
-            onClick={() => setCurrentPage('bookings')}
+            className="back-btn"
+            onClick={() => setCurrentPage('home')}
           >
-            📋 Мои бронирования
+            ← Назад
           </button>
+          <RegistrationPage onUserLogin={setUser} />
+        </>
+      ) : currentPage === 'home' ? (
+        <>
+          <div className="header">
+            <h1>🏠 Аренда жилья</h1>
+            {user ? (
+              <div className="user-info">
+                <span>Привет, {user.firstName || user.email}!</span>
+                <button onClick={handleLogout} className="logout-btn">
+                  Выйти
+                </button>
+              </div>
+            ) : (
+              <button 
+                className="auth-btn"
+                onClick={() => setCurrentPage('auth')}
+              >
+                Войти / Регистрация
+              </button>
+            )}
+          </div>
+          <PropertySwiper properties={properties} />
+          {user && (
+            <button 
+              className="bookings-btn"
+              onClick={() => setCurrentPage('bookings')}
+            >
+              📋 Мои бронирования
+            </button>
+          )}
         </>
       ) : (
         <>

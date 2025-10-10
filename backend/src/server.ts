@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 
 const app = express();
@@ -22,7 +23,9 @@ app.get('/', (req, res) => {
       property: 'GET /api/properties/:id',
       bookings: 'POST /api/bookings',
       userBookings: 'GET /api/bookings/:telegramId',
-      favorites: 'POST /api/favorites'
+      favorites: 'POST /api/favorites',
+      register: 'POST /api/auth/register',
+      login: 'POST /api/auth/login'
     }
   });
 });
@@ -174,6 +177,90 @@ app.post('/api/favorites', async (req, res) => {
     res.json(favorite);
   } catch (error) {
     res.status(500).json({ error: 'Ошибка добавления в избранное' });
+  }
+});
+
+// Регистрация пользователя
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { firstName, email, phone, password } = req.body;
+    
+    // Валидация
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email и пароль обязательны' });
+    }
+    
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Пароль должен содержать минимум 6 символов' });
+    }
+    
+    // Проверка существования пользователя
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email },
+          { phone }
+        ]
+      }
+    });
+    
+    if (existingUser) {
+      return res.status(400).json({ error: 'Пользователь с таким email или телефоном уже существует' });
+    }
+    
+    // Хеширование пароля
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Создание пользователя
+    const user = await prisma.user.create({
+      data: {
+        firstName,
+        email,
+        phone,
+        password: hashedPassword
+      }
+    });
+    
+    // Возвращаем пользователя без пароля
+    const { password: _, ...userWithoutPassword } = user;
+    res.status(201).json(userWithoutPassword);
+  } catch (error) {
+    console.error('Ошибка регистрации:', error);
+    res.status(500).json({ error: 'Ошибка регистрации' });
+  }
+});
+
+// Авторизация пользователя
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email и пароль обязательны' });
+    }
+    
+    // Поиск пользователя
+    const user = await prisma.user.findUnique({
+      where: { email }
+    });
+    
+    if (!user || !user.password) {
+      return res.status(401).json({ error: 'Неверный email или пароль' });
+    }
+    
+    // Проверка пароля
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Неверный email или пароль' });
+    }
+    
+    // Возвращаем пользователя без пароля
+    const { password: _, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
+  } catch (error) {
+    console.error('Ошибка авторизации:', error);
+    res.status(500).json({ error: 'Ошибка авторизации' });
   }
 });
 

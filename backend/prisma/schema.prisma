@@ -27,9 +27,12 @@ model Property {
 
 model User {
   id         Int      @id @default(autoincrement())
-  telegramId String   @unique
+  telegramId String?  @unique
   firstName  String?
   username   String?
+  email      String?  @unique
+  phone      String?  @unique
+  password   String?
   createdAt  DateTime @default(now())
   bookings   Booking[]
   favorites  Favorite[]

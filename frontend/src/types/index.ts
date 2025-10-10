@@ -13,9 +13,11 @@ export interface Property {
 
 export interface User {
   id: number;
-  telegramId: string;
+  telegramId?: string;
   username?: string;
   firstName?: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface Booking {
