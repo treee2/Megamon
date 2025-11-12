@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navigationItems = [
   {
@@ -57,7 +58,9 @@ const navigationItems = [
 
 function LayoutContent({ children, currentPageName }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { toggleSidebar, open } = useSidebar();
+  const { logout } = useAuth();
 
   const { data: user } = useQuery({
     queryKey: ['currentUser'],
@@ -71,7 +74,9 @@ function LayoutContent({ children, currentPageName }) {
   });
 
   const handleLogout = () => {
+    logout();
     base44.auth.logout();
+    navigate(createPageUrl("Login"), { replace: true });
   };
 
   const isAdmin = user?.role === 'admin';

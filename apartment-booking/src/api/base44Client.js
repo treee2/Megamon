@@ -276,5 +276,18 @@ export const base44 = {
         body: JSON.stringify({ ...profileData, email }),
       });
     },
+
+    // Выход из системы
+    logout: () => {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      try {
+        window.localStorage.removeItem('currentUserEmail');
+      } catch (error) {
+        console.warn('Не удалось очистить данные пользователя из localStorage:', error);
+      }
+    },
   }
 };
