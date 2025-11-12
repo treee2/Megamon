@@ -46,6 +46,7 @@ import MyBookings from './pages/MyBookings';
 import AddApartment from './pages/AddApartment';
 import Profile from './pages/Profile';
 import Moderation from './pages/Moderation';
+import Support from './pages/Support';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -152,6 +153,17 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout currentPageName="Moderation">
               <Moderation />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/support"
+        element={
+          <ProtectedRoute>
+            <Layout currentPageName="Support">
+              <Support />
             </Layout>
           </ProtectedRoute>
         }
