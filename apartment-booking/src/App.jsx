@@ -56,17 +56,17 @@ const queryClient = new QueryClient({
   },
 });
 
-// Компонент для защиты маршрутов - проверяет авторизацию
-function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth();
+// // Компонент для защиты маршрутов - проверяет авторизацию
+// function ProtectedRoute({ children }) {
+//   const { isAuthenticated } = useAuth();
   
-  // Если пользователь не авторизован, перенаправляем на страницу входа
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+//   // Если пользователь не авторизован, перенаправляем на страницу входа
+//   if (!isAuthenticated) {
+//     return <Navigate to="/login" replace />;
+//   }
   
-  return children;
-}
+//   return children;
+// }
 
 // Компонент с маршрутами приложения
 function AppRoutes() {

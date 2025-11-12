@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, MapPin, DollarSign, User, CheckCircle2, XCircle, Clock, CreditCard, MessageSquare } from "lucide-react";
+import { Calendar, Users, MapPin, DollarSign, User, CheckCircle2, XCircle, CreditCard, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -32,18 +32,27 @@ const statusLabels = {
 };
 
 export default function BookingCard({ booking, apartment, showActions = false }) {
+  // 🛑 Проверка — если данных нет, просто не рендерим карточку
+  if (!booking) {
+    return (
+      <Card className="bg-white/90 p-6 text-center text-slate-500">
+        Загрузка бронирования...
+      </Card>
+    );
+  }
+
   const queryClient = useQueryClient();
   const [showReviewForm, setShowReviewForm] = React.useState(false);
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const navigate = useNavigate();
 
   const { data: guestUser } = useQuery({
-    queryKey: ['user', booking.created_by],
+    queryKey: ['user', booking?.created_by],
     queryFn: async () => {
       const users = await base44.entities.User.filter({ email: booking.created_by });
       return users[0];
     },
-    enabled: !!booking.created_by,
+    enabled: !!booking?.created_by,
   });
 
   const { data: currentUser } = useQuery({
@@ -52,36 +61,49 @@ export default function BookingCard({ booking, apartment, showActions = false })
   });
 
   const { data: existingReview } = useQuery({
-    queryKey: ['review', booking.id],
+    queryKey: ['review', booking?.id],
     queryFn: async () => {
       const reviews = await base44.entities.Review.filter({ booking_id: booking.id });
       return reviews[0];
     },
-    enabled: !!booking.id,
+    enabled: !!booking?.id,
   });
 
   const updateBookingMutation = useMutation({
     mutationFn: ({ id, status }) => base44.entities.Booking.update(id, { status }),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] });
     },
   });
 
   const handleConfirm = () => {
-    updateBookingMutation.mutate({ id: booking.id, status: "confirmed" });
+    if (booking?.id) {
+      updateBookingMutation.mutate({ id: booking.id, status: "confirmed" });
+    }
   };
 
   const handleCancel = () => {
-    updateBookingMutation.mutate({ id: booking.id, status: "cancelled" });
+    if (booking?.id) {
+      updateBookingMutation.mutate({ id: booking.id, status: "cancelled" });
+    }
   };
 
-  const isOwner = currentUser?.role === 'admin' || apartment?.created_by === currentUser?.email;
-  const canLeaveReview = booking.status === "completed" && 
-                         !existingReview && 
-                         booking.created_by === currentUser?.email;
+  const isOwner =
+    currentUser?.role === "admin" ||
+    (apartment && apartment.created_by === currentUser?.email);
 
-  const chatRecipient = isOwner ? booking.created_by : apartment?.created_by;
-  const chatRecipientName = isOwner ? guestUser?.full_name : "Владелец";
+  const canLeaveReview =
+    booking.status === "completed" &&
+    !existingReview &&
+    booking.created_by === currentUser?.email;
+
+  const chatRecipient = isOwner
+    ? booking?.created_by
+    : apartment?.created_by;
+
+  const chatRecipientName = isOwner
+    ? guestUser?.full_name
+    : "Владелец";
 
   return (
     <>
@@ -96,12 +118,15 @@ export default function BookingCard({ booking, apartment, showActions = false })
             </Badge>
           </div>
         </CardHeader>
-        
+
         <CardContent className="space-y-4">
           {apartment?.address && (
             <div className="flex items-center gap-2 text-slate-600">
               <MapPin className="w-4 h-4 text-indigo-600" />
-              <span className="text-sm">{apartment.city && `${apartment.city}, `}{apartment.address}</span>
+              <span className="text-sm">
+                {apartment.city && `${apartment.city}, `}
+                {apartment.address}
+              </span>
             </div>
           )}
 
@@ -117,39 +142,43 @@ export default function BookingCard({ booking, apartment, showActions = false })
               </div>
             </div>
           )}
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-indigo-600" />
               <div>
                 <p className="text-xs text-slate-500 font-medium">Заезд</p>
                 <p className="text-sm font-semibold text-slate-900">
-                  {format(new Date(booking.check_in), "d MMM yyyy", { locale: ru })}
+                  {booking?.check_in
+                    ? format(new Date(booking.check_in), "d MMM yyyy", { locale: ru })
+                    : "—"}
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-indigo-600" />
               <div>
                 <p className="text-xs text-slate-500 font-medium">Выезд</p>
                 <p className="text-sm font-semibold text-slate-900">
-                  {format(new Date(booking.check_out), "d MMM yyyy", { locale: ru })}
+                  {booking?.check_out
+                    ? format(new Date(booking.check_out), "d MMM yyyy", { locale: ru })
+                    : "—"}
                 </p>
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center justify-between pt-4 border-t border-slate-100">
             <div className="flex items-center gap-2 text-slate-600">
               <Users className="w-4 h-4 text-indigo-600" />
               <span className="text-sm font-medium">{booking.guests} гостей</span>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-amber-600" />
               <span className="text-lg font-bold text-slate-900">
-                {booking.total_price?.toLocaleString('ru-RU')} ₽
+                {booking.total_price?.toLocaleString("ru-RU")} ₽
               </span>
             </div>
           </div>
@@ -161,30 +190,32 @@ export default function BookingCard({ booking, apartment, showActions = false })
             </div>
           )}
 
-          {(booking.status === "confirmed" || booking.status === "pending") && chatRecipient && (
-            <div className="pt-4 border-t border-slate-100">
-              <Button
-                onClick={() => setChatDialogOpen(true)}
-                variant="outline"
-                className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50"
-              >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Написать {isOwner ? 'гостю' : 'владельцу'}
-              </Button>
-            </div>
-          )}
+          {(booking.status === "confirmed" || booking.status === "pending") &&
+            chatRecipient && (
+              <div className="pt-4 border-t border-slate-100">
+                <Button
+                  onClick={() => setChatDialogOpen(true)}
+                  variant="outline"
+                  className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Написать {isOwner ? "гостю" : "владельцу"}
+                </Button>
+              </div>
+            )}
 
-          {booking.status === "confirmed" && booking.created_by === currentUser?.email && (
-            <div className="pt-4 border-t border-slate-100">
-              <Button
-                onClick={() => navigate(createPageUrl(`Payment?bookingId=${booking.id}`))}
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
-              >
-                <CreditCard className="w-4 h-4 mr-2" />
-                Перейти к оплате
-              </Button>
-            </div>
-          )}
+          {booking.status === "confirmed" &&
+            booking.created_by === currentUser?.email && (
+              <div className="pt-4 border-t border-slate-100">
+                <Button
+                  onClick={() => navigate(createPageUrl(`Payment?bookingId=${booking.id}`))}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Перейти к оплате
+                </Button>
+              </div>
+            )}
 
           {canLeaveReview && !showReviewForm && (
             <div className="pt-4 border-t border-slate-100">
