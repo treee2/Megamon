@@ -1,4 +1,6 @@
 -- Удаляем таблицы, если они уже существуют (для чистого старта)
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS support_tickets;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS bookings;
 DROP TABLE IF EXISTS apartments;
@@ -85,6 +87,22 @@ CREATE TABLE bookings (
     FOREIGN KEY (created_by) REFERENCES users(email) ON DELETE CASCADE
 );
 
+-- Создаём таблицу оплат
+CREATE TABLE payments (
+    id TEXT PRIMARY KEY,
+    booking_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    payment_method TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    transaction_id TEXT,
+    paid_by TEXT NOT NULL,
+    created_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_date TEXT DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    FOREIGN KEY (paid_by) REFERENCES users(email) ON DELETE CASCADE
+);
+
 -- Создаём таблицу отзывов
 CREATE TABLE reviews (
     id TEXT PRIMARY KEY,
@@ -115,6 +133,23 @@ CREATE TABLE reviews (
     UNIQUE(booking_id)
 );
 
+-- Создаём таблицу обращений в поддержку
+CREATE TABLE support_tickets (
+    id TEXT PRIMARY KEY,
+    subject TEXT NOT NULL,
+    message TEXT NOT NULL,
+    status TEXT DEFAULT 'open',
+    created_by TEXT NOT NULL,
+    admin_response TEXT,
+    responded_by TEXT,
+    responded_at TEXT,
+    created_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_date TEXT DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (created_by) REFERENCES users(email) ON DELETE CASCADE,
+    FOREIGN KEY (responded_by) REFERENCES users(email) ON DELETE SET NULL
+);
+
 -- Создаём индексы для ускорения поиска
 CREATE INDEX idx_apartments_available ON apartments(is_available);
 CREATE INDEX idx_apartments_price ON apartments(price_per_night);
@@ -130,6 +165,13 @@ CREATE INDEX idx_bookings_dates ON bookings(check_in, check_out);
 CREATE INDEX idx_reviews_apartment ON reviews(apartment_id);
 CREATE INDEX idx_reviews_booking ON reviews(booking_id);
 CREATE INDEX idx_reviews_created_by ON reviews(created_by);
+
+CREATE INDEX idx_payments_booking ON payments(booking_id);
+CREATE INDEX idx_payments_paid_by ON payments(paid_by);
+CREATE INDEX idx_payments_status ON payments(status);
+
+CREATE INDEX idx_support_tickets_status ON support_tickets(status);
+CREATE INDEX idx_support_tickets_created_by ON support_tickets(created_by);
 
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_login ON users(login);
@@ -156,11 +198,22 @@ VALUES
 
 -- Вставляем тестовые бронирования
 INSERT INTO bookings (id, apartment_id, check_in, check_out, guests, total_price, status, created_by, special_requests)
-VALUES 
+VALUES
 ('booking_1', '1', '2025-01-15', '2025-01-18', 2, 15000, 'completed', 'maria@example.com', 'Ранний заезд, пожалуйста'),
 ('booking_2', '2', '2025-02-10', '2025-02-15', 4, 60000, 'confirmed', 'ivan@example.com', NULL);
 
+-- Вставляем тестовые оплаты
+INSERT INTO payments (id, booking_id, amount, payment_method, status, transaction_id, paid_by)
+VALUES
+('payment_1', 'booking_1', 15000, 'card', 'completed', 'TXN123456', 'maria@example.com');
+
 -- Вставляем тестовые отзывы
 INSERT INTO reviews (id, apartment_id, booking_id, rating, comment, cleanliness, communication, location, value, created_by)
-VALUES 
+VALUES
 ('review_1', '1', 'booking_1', 5, 'Отличная квартира! Всё было чисто, хозяин очень отзывчивый. Рекомендую!', 5, 5, 5, 5, 'maria@example.com');
+
+-- Вставляем тестовые обращения
+INSERT INTO support_tickets (id, subject, message, status, created_by, admin_response, responded_by, responded_at)
+VALUES
+('ticket_1', 'Проблема с оплатой', 'Не удаётся оплатить бронирование, выдаёт ошибку', 'closed', 'maria@example.com', 'Мы проверили платёж и всё исправили. Попробуйте ещё раз.', 'admin@example.com', '2024-11-01T10:30:00.000Z'),
+('ticket_2', 'Вопрос по бронированию', 'Когда подтвердят моё бронирование?', 'in_progress', 'ivan@example.com', NULL, NULL, NULL);

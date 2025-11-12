@@ -8,6 +8,8 @@ import bookingsRouter from './routes/bookings.js';
 import usersRouter from './routes/users.js';
 import authRouter from './routes/auth.js';
 import reviewsRouter from './routes/reviews.js';
+import supportTicketsRouter from './routes/supportTickets.js';
+import paymentsRouter from './routes/payments.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +35,8 @@ app.use('/api/apartments', apartmentsRouter);
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/reviews', reviewsRouter);
+app.use('/api/support-tickets', supportTicketsRouter);
+app.use('/api/payments', paymentsRouter);
 
 // Простой тестовый маршрут для проверки работы сервера
 app.get('/api/health', (req, res) => {
@@ -59,5 +63,9 @@ app.listen(PORT, () => {
   console.log(`  ➕ POST /api/bookings            - Создать бронирование`);
   console.log(`  ⭐ GET  /api/reviews             - Список отзывов`);
   console.log(`  ➕ POST /api/reviews             - Создать отзыв`);
+  console.log(`  🆘 GET  /api/support-tickets    - Обращения в поддержку`);
+  console.log(`  ➕ POST /api/support-tickets    - Создать обращение`);
+  console.log(`  💳 GET  /api/payments           - Список оплат`);
+  console.log(`  ➕ POST /api/payments           - Создать оплату`);
   console.log('═══════════════════════════════════════════════');
 });
