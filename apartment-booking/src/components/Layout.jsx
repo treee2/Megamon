@@ -3,7 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Home, Calendar, User, Building2, Plus, LogOut, Settings, ChevronLeft } from "lucide-react";
+import { Home, Calendar, User, Building2, Plus, LogOut, Settings, ChevronLeft, HelpCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -47,6 +47,11 @@ const navigationItems = [
     title: "Профиль",
     url: createPageUrl("Profile"),
     icon: User,
+  },
+  {
+    title: "Поддержка",
+    url: createPageUrl("Support"),
+    icon: HelpCircle,
   },
 ];
 

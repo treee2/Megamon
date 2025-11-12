@@ -136,6 +136,14 @@ export const base44 = {
   },
   
   auth: {
+    // Регистрация нового пользователя
+    register: async (userData) => {
+      return await fetchAPI('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      });
+    },
+    
     // Вход в систему
     login: async (login, password) => {
       return await fetchAPI('/auth/login', {
@@ -159,19 +167,5 @@ export const base44 = {
         body: JSON.stringify(profileData),
       });
     },
-  },
-  
-  integrations: {
-    Core: {
-      UploadFile: async ({ file }) => {
-        return new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            resolve({ file_url: reader.result });
-          };
-          reader.readAsDataURL(file);
-        });
-      }
-    }
   }
 };

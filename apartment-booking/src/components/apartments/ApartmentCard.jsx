@@ -1,81 +1,251 @@
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bed, Bath, Users, MapPin } from "lucide-react";
-// eslint-disable-next-line no-unused-vars
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Calendar, Users, MapPin, DollarSign, User, CheckCircle2, XCircle, Clock, CreditCard, MessageSquare } from "lucide-react";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { base44 } from "@/api/base44Client";
+import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import ChatWindow from "../chat/ChatWindow";
 
-export default function ApartmentCard({ apartment }) {
+const statusColors = {
+  pending: "bg-amber-100 text-amber-800 border-amber-200",
+  confirmed: "bg-green-100 text-green-800 border-green-200",
+  cancelled: "bg-red-100 text-red-800 border-red-200",
+  completed: "bg-slate-100 text-slate-800 border-slate-200"
+};
+
+const statusLabels = {
+  pending: "Ожидает подтверждения",
+  confirmed: "Подтверждено",
+  cancelled: "Отменено",
+  completed: "Завершено"
+};
+
+export default function BookingCard({ booking, apartment, showActions = false }) {
+  const queryClient = useQueryClient();
+  const [showReviewForm, setShowReviewForm] = React.useState(false);
+  const [chatDialogOpen, setChatDialogOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const { data: guestUser } = useQuery({
+    queryKey: ['user', booking.created_by],
+    queryFn: async () => {
+      const users = await base44.entities.User.filter({ email: booking.created_by });
+      return users[0];
+    },
+    enabled: !!booking.created_by,
+  });
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: existingReview } = useQuery({
+    queryKey: ['review', booking.id],
+    queryFn: async () => {
+      const reviews = await base44.entities.Review.filter({ booking_id: booking.id });
+      return reviews[0];
+    },
+    enabled: !!booking.id,
+  });
+
+  const updateBookingMutation = useMutation({
+    mutationFn: ({ id, status }) => base44.entities.Booking.update(id, { status }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+    },
+  });
+
+  const handleConfirm = () => {
+    updateBookingMutation.mutate({ id: booking.id, status: "confirmed" });
+  };
+
+  const handleCancel = () => {
+    updateBookingMutation.mutate({ id: booking.id, status: "cancelled" });
+  };
+
+  const isOwner = currentUser?.role === 'admin' || apartment?.created_by === currentUser?.email;
+  const canLeaveReview = booking.status === "completed" && 
+                         !existingReview && 
+                         booking.created_by === currentUser?.email;
+
+  const chatRecipient = isOwner ? booking.created_by : apartment?.created_by;
+  const chatRecipientName = isOwner ? guestUser?.full_name : "Владелец";
+
   return (
-    <Link to={createPageUrl(`ApartmentDetails?id=${apartment.id}`)}>
-      <motion.div
-        whileHover={{ y: -8 }}
-        transition={{ duration: 0.3 }}
-      >
-        <Card className="overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 bg-white/90 backdrop-blur-sm">
-          <div className="relative h-64 overflow-hidden">
-            <img
-              src={apartment.image_filename 
-                ? `/images/apartments/${apartment.image_filename}` 
-                : "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800"}
-              alt={apartment.title}
-              onError={(e) => {
-                // Если локальное изображение не найдено, показываем изображение из интернета
-                e.target.src = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800";
-              }}
-              className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
-            />
-            <div className="absolute top-4 right-4">
-              <Badge className="bg-white/95 text-indigo-700 border-0 shadow-lg font-semibold px-3 py-1">
-                {apartment.price_per_night?.toLocaleString('ru-RU')} ₽ / ночь
-              </Badge>
+    <>
+      <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-start gap-4">
+            <CardTitle className="text-xl font-bold text-slate-900">
+              {apartment?.title || "Загрузка..."}
+            </CardTitle>
+            <Badge className={`${statusColors[booking.status]} border font-semibold`}>
+              {statusLabels[booking.status]}
+            </Badge>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          {apartment?.address && (
+            <div className="flex items-center gap-2 text-slate-600">
+              <MapPin className="w-4 h-4 text-indigo-600" />
+              <span className="text-sm">{apartment.city && `${apartment.city}, `}{apartment.address}</span>
             </div>
-            {!apartment.is_available && (
-              <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center">
-                <Badge className="bg-red-500 text-white border-0 shadow-xl px-4 py-2 text-sm">
-                  Забронировано
-                </Badge>
+          )}
+
+          {guestUser && showActions && (
+            <div className="flex items-center gap-2 text-slate-600 bg-slate-50 p-3 rounded-lg">
+              <User className="w-4 h-4 text-indigo-600" />
+              <div className="text-sm">
+                <span className="font-medium">{guestUser.full_name}</span>
+                {guestUser.phone && (
+                  <span className="text-slate-500 ml-2">• {guestUser.phone}</span>
+                )}
+                <div className="text-xs text-slate-500 mt-1">{guestUser.email}</div>
               </div>
-            )}
+            </div>
+          )}
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-indigo-600" />
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Заезд</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {format(new Date(booking.check_in), "d MMM yyyy", { locale: ru })}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-indigo-600" />
+              <div>
+                <p className="text-xs text-slate-500 font-medium">Выезд</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {format(new Date(booking.check_out), "d MMM yyyy", { locale: ru })}
+                </p>
+              </div>
+            </div>
           </div>
           
-          <CardContent className="p-6">
-            <h3 className="font-bold text-xl text-slate-900 mb-2 line-clamp-1">
-              {apartment.title}
-            </h3>
-            
-            {apartment.address && (
-              <div className="flex items-center gap-2 text-slate-500 mb-4">
-                <MapPin className="w-4 h-4" />
-                <span className="text-sm line-clamp-1">{apartment.address}</span>
-              </div>
-            )}
-            
-            <div className="flex items-center gap-4 text-sm text-slate-600">
-              <div className="flex items-center gap-1.5">
-                <Bed className="w-4 h-4 text-indigo-600" />
-                <span className="font-medium">{apartment.bedrooms}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Bath className="w-4 h-4 text-indigo-600" />
-                <span className="font-medium">{apartment.bathrooms || 1}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-indigo-600" />
-                <span className="font-medium">до {apartment.max_guests || 2}</span>
-              </div>
+          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+            <div className="flex items-center gap-2 text-slate-600">
+              <Users className="w-4 h-4 text-indigo-600" />
+              <span className="text-sm font-medium">{booking.guests} гостей</span>
             </div>
             
-            {apartment.description && (
-              <p className="text-sm text-slate-600 mt-4 line-clamp-2">
-                {apartment.description}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </Link>
+            <div className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-amber-600" />
+              <span className="text-lg font-bold text-slate-900">
+                {booking.total_price?.toLocaleString('ru-RU')} ₽
+              </span>
+            </div>
+          </div>
+
+          {booking.special_requests && (
+            <div className="pt-4 border-t border-slate-100">
+              <p className="text-xs text-slate-500 font-medium mb-1">Особые пожелания:</p>
+              <p className="text-sm text-slate-700">{booking.special_requests}</p>
+            </div>
+          )}
+
+          {(booking.status === "confirmed" || booking.status === "pending") && chatRecipient && (
+            <div className="pt-4 border-t border-slate-100">
+              <Button
+                onClick={() => setChatDialogOpen(true)}
+                variant="outline"
+                className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Написать {isOwner ? 'гостю' : 'владельцу'}
+              </Button>
+            </div>
+          )}
+
+          {booking.status === "confirmed" && booking.created_by === currentUser?.email && (
+            <div className="pt-4 border-t border-slate-100">
+              <Button
+                onClick={() => navigate(createPageUrl(`Payment?bookingId=${booking.id}`))}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                <CreditCard className="w-4 h-4 mr-2" />
+                Перейти к оплате
+              </Button>
+            </div>
+          )}
+
+          {canLeaveReview && !showReviewForm && (
+            <div className="pt-4 border-t border-slate-100">
+              <Button
+                onClick={() => setShowReviewForm(true)}
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Оставить отзыв
+              </Button>
+            </div>
+          )}
+
+          {existingReview && (
+            <div className="pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle2 className="w-4 h-4" />
+                <span className="text-sm font-medium">Отзыв оставлен</span>
+              </div>
+            </div>
+          )}
+
+          {showActions && isOwner && booking.status === "pending" && (
+            <div className="flex gap-3 pt-4 border-t border-slate-100">
+              <Button
+                onClick={handleConfirm}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                disabled={updateBookingMutation.isPending}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+                Подтвердить
+              </Button>
+              <Button
+                onClick={handleCancel}
+                variant="outline"
+                className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                disabled={updateBookingMutation.isPending}
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Отменить
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={chatDialogOpen} onOpenChange={setChatDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Чат по бронированию</DialogTitle>
+          </DialogHeader>
+          {chatRecipient && (
+            <ChatWindow
+              bookingId={booking.id}
+              apartmentId={apartment?.id}
+              recipientEmail={chatRecipient}
+              recipientName={chatRecipientName}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
