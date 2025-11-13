@@ -177,30 +177,30 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_login ON users(login);
 CREATE INDEX idx_users_role ON users(role);
 
--- Вставляем тестовых пользователей
+-- Вставляем тестовых пользователей (все НЕ заблокированы)
 -- Пароль для всех: password123 (в реальном приложении нужно хешировать!)
-INSERT INTO users (id, login, password, email, full_name, phone, preferences, profile_completed, role, avatar)
+INSERT INTO users (id, login, password, email, full_name, phone, preferences, profile_completed, role, avatar, is_blocked)
 VALUES 
-('user_1', 'admin', 'password123', 'admin@example.com', 'Администратор Системы', '+7 (999) 000-00-00', '{"smoking":false,"pets":false,"early_checkin":false}', 1, 'admin', NULL),
-('user_2', 'ivan.petrov', 'password123', 'ivan@example.com', 'Иван Петров', '+7 (999) 123-45-67', '{"smoking":false,"pets":false,"early_checkin":true}', 1, 'user', NULL),
-('user_3', 'maria.ivanova', 'password123', 'maria@example.com', 'Мария Иванова', '+7 (999) 234-56-78', '{"smoking":false,"pets":true,"early_checkin":false}', 1, 'user', NULL);
+('user_1', 'admin', 'password123', 'admin@example.com', 'Администратор Системы', '+7 (999) 000-00-00', '{"smoking":false,"pets":false,"early_checkin":false}', 1, 'admin', NULL, 0),
+('user_2', 'ivan.petrov', 'password123', 'ivan@example.com', 'Иван Петров', '+7 (999) 123-45-67', '{"smoking":false,"pets":false,"early_checkin":true}', 1, 'user', NULL, 0),
+('user_3', 'maria.ivanova', 'password123', 'maria@example.com', 'Мария Иванова', '+7 (999) 234-56-78', '{"smoking":false,"pets":true,"early_checkin":false}', 1, 'user', NULL, 0);
 
--- Вставляем тестовые данные квартир
-INSERT INTO apartments (id, title, description, city, address, price_per_night, bedrooms, bathrooms, max_guests, is_available, amenities, image_filename, moderation_status, created_by)
+-- Вставляем тестовые данные квартир с корректными image_url
+INSERT INTO apartments (id, title, description, city, address, price_per_night, bedrooms, bathrooms, max_guests, is_available, amenities, image_url, moderation_status, created_by)
 VALUES 
-('1', 'Уютная студия в центре', 'Современная квартира с прекрасным видом на город. Идеально подходит для одного или двух человек.', 'Москва', 'ул. Пушкина, д. 10', 5000, 1, 1, 2, 1, '["Wi-Fi","ТВ","Кондиционер"]', 'apartment-1.jpg', 'approved', 'ivan@example.com'),
+('apt_1', 'Уютная студия в центре', 'Современная квартира с прекрасным видом на город. Идеально подходит для одного или двух человек.', 'Москва', 'ул. Пушкина, д. 10', 5000, 1, 1, 2, 1, '["Wi-Fi","ТВ","Кондиционер"]', 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800', 'approved', 'ivan@example.com'),
 
-('2', 'Просторные апартаменты', 'Роскошная квартира для семейного отдыха с тремя спальнями и современной кухней.', 'Санкт-Петербург', 'Невский проспект, д. 25', 12000, 3, 2, 6, 1, '["Wi-Fi","ТВ","Кондиционер","Парковка"]', 'apartment-2.jpg', 'approved', 'maria@example.com'),
+('apt_2', 'Просторные апартаменты', 'Роскошная квартира для семейного отдыха с тремя спальнями и современной кухней.', 'Санкт-Петербург', 'Невский проспект, д. 25', 12000, 3, 2, 6, 1, '["Wi-Fi","ТВ","Кондиционер","Парковка"]', 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800', 'approved', 'maria@example.com'),
 
-('3', 'Элитная квартира с видом', 'Премиальное жильё в историческом центре города.', 'Москва', 'Тверская улица, д. 15', 18000, 2, 2, 4, 1, '["Wi-Fi","ТВ","Кондиционер","Парковка"]', 'apartment-3.jpg', 'approved', 'ivan@example.com'),
+('apt_3', 'Элитная квартира с видом', 'Премиальное жильё в историческом центре города.', 'Москва', 'Тверская улица, д. 15', 18000, 2, 2, 4, 1, '["Wi-Fi","ТВ","Кондиционер","Парковка"]', 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800', 'approved', 'ivan@example.com'),
 
-('4', 'Просторная квартира', 'C отдельными спальнями, идеально подходящая для семейного отдыха. Детская площадка во дворе.', 'Казань', 'улица Баумана, 12', 8000, 3, 2, 5, 1, '["Wi-Fi","ТВ","Кондиционер","Детская площадка"]', 'apartment-4.jpg', 'approved', 'maria@example.com');
+('apt_4', 'Просторная квартира', 'C отдельными спальнями, идеально подходящая для семейного отдыха. Детская площадка во дворе.', 'Казань', 'улица Баумана, 12', 8000, 3, 2, 5, 1, '["Wi-Fi","ТВ","Кондиционер","Детская площадка"]', 'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800', 'approved', 'maria@example.com');
 
 -- Вставляем тестовые бронирования
 INSERT INTO bookings (id, apartment_id, check_in, check_out, guests, total_price, status, created_by, special_requests)
 VALUES
-('booking_1', '1', '2025-01-15', '2025-01-18', 2, 15000, 'completed', 'maria@example.com', 'Ранний заезд, пожалуйста'),
-('booking_2', '2', '2025-02-10', '2025-02-15', 4, 60000, 'confirmed', 'ivan@example.com', NULL);
+('booking_1', 'apt_1', '2025-01-15', '2025-01-18', 2, 15000, 'completed', 'maria@example.com', 'Ранний заезд, пожалуйста'),
+('booking_2', 'apt_2', '2025-02-10', '2025-02-15', 4, 60000, 'confirmed', 'ivan@example.com', NULL);
 
 -- Вставляем тестовые оплаты
 INSERT INTO payments (id, booking_id, amount, payment_method, status, transaction_id, paid_by)
@@ -210,7 +210,7 @@ VALUES
 -- Вставляем тестовые отзывы
 INSERT INTO reviews (id, apartment_id, booking_id, rating, comment, cleanliness, communication, location, value, created_by)
 VALUES
-('review_1', '1', 'booking_1', 5, 'Отличная квартира! Всё было чисто, хозяин очень отзывчивый. Рекомендую!', 5, 5, 5, 5, 'maria@example.com');
+('review_1', 'apt_1', 'booking_1', 5, 'Отличная квартира! Всё было чисто, хозяин очень отзывчивый. Рекомендую!', 5, 5, 5, 5, 'maria@example.com');
 
 -- Вставляем тестовые обращения
 INSERT INTO support_tickets (id, subject, message, status, created_by, admin_response, responded_by, responded_at)

@@ -138,7 +138,7 @@ export default function ApartmentDetails() {
 
   const handleBooking = async (e) => {
     e.preventDefault();
-    if (!checkIn || !checkOut || !datesAvailable) return;
+    if (!checkIn || !checkOut || !datesAvailable || !user?.email) return;
 
     await createBookingMutation.mutateAsync({
       apartment_id: apartmentId,
@@ -147,6 +147,7 @@ export default function ApartmentDetails() {
       guests,
       total_price: calculateTotalPrice(),
       special_requests: specialRequests,
+      created_by: user.email,
       status: "pending"
     });
   };

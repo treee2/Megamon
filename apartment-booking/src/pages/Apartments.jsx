@@ -51,8 +51,13 @@ export default function Apartments() {
     
     const matchesGuests = !filters.guests || (apt.max_guests || 2) >= filters.guests;
     
+    // Парсим amenities если это JSON-строка
+    const aptAmenities = typeof apt.amenities === 'string' 
+      ? JSON.parse(apt.amenities || '[]')
+      : apt.amenities || [];
+    
     const matchesAmenities = filters.amenities.length === 0 || 
-                            filters.amenities.every(amenity => apt.amenities?.includes(amenity));
+                            filters.amenities.every(amenity => aptAmenities.includes(amenity));
     
     return isApproved && matchesSearch && matchesCity && matchesPrice && matchesBedrooms && matchesGuests && matchesAmenities;
   });

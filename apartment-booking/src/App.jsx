@@ -47,6 +47,8 @@ import AddApartment from './pages/AddApartment';
 import Profile from './pages/Profile';
 import Moderation from './pages/Moderation';
 import Support from './pages/Support';
+import SupportAdmin from './pages/SupportAdmin';
+import Payment from './pages/Payment';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -164,6 +166,28 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout currentPageName="Support">
               <Support />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/supportadmin"
+        element={
+          <ProtectedRoute>
+            <Layout currentPageName="SupportAdmin">
+              <SupportAdmin />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/payment"
+        element={
+          <ProtectedRoute>
+            <Layout currentPageName="Payment">
+              <Payment />
             </Layout>
           </ProtectedRoute>
         }

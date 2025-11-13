@@ -112,7 +112,7 @@ export default function ChatWindow({ apartmentId, bookingId, recipientEmail, rec
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((message) => {
+              {messages?.map((message) => {
                 const isOwn = message.created_by === currentUser.email;
                 return (
                   <div key={message.id} className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
