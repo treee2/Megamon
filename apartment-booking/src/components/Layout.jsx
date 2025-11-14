@@ -123,8 +123,8 @@ function LayoutContent({ children, currentPageName }) {
               </div>
               {open && (
                 <div>
-                  <h2 className="font-bold text-slate-900 text-lg">LuxStay</h2>
-                  <p className="text-xs text-slate-500 font-medium">Премиум квартиры</p>
+                  <h2 className="font-bold text-slate-900 text-lg">Megamon</h2>
+                  <p className="text-xs text-slate-500 font-medium">Бронируйте с удовольствием🏠</p>
                 </div>
               )}
             </Link>
@@ -242,7 +242,7 @@ function LayoutContent({ children, currentPageName }) {
         <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200/60 px-6 py-4 sticky top-0 z-10">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors duration-200" />
-            <h1 className="text-xl font-bold text-slate-900">LuxStay</h1>
+            <h1 className="text-xl font-bold text-slate-900">Megamon</h1>
           </div>
         </header>
 

@@ -105,7 +105,7 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl shadow-lg shadow-indigo-500/30 mb-4">
             <Building2 className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">LuxStay</h1>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Megamon</h1>
           <p className="text-slate-600">Премиум квартиры для вашего отдыха</p>
         </div>
 
