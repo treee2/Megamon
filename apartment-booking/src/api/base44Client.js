@@ -1,6 +1,6 @@
-// Базовый URL для API (сервер работает на порту 3001)
 // Базовый URL для API
-const API_BASE_URL = 'http://localhost:3001/api';
+// Используем переменную окружения для production или localhost для development
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Получаем email текущего пользователя из localStorage
 function getStoredEmail() {
@@ -230,6 +230,52 @@ export const base44 = {
         return await fetchAPI('/payments', {
           method: 'POST',
           body: JSON.stringify(paymentData),
+        });
+      }
+    },
+
+    Message: {
+      list: async (sortOrder) => {
+        return await fetchAPI('/messages');
+      },
+
+      filter: async (params = {}) => {
+        const messages = await fetchAPI('/messages');
+
+        if (params.id) {
+          return messages.filter(msg => msg.id === params.id);
+        }
+
+        if (params.apartment_id) {
+          return messages.filter(msg => msg.apartment_id === params.apartment_id);
+        }
+
+        if (params.booking_id) {
+          return messages.filter(msg => msg.booking_id === params.booking_id);
+        }
+
+        if (params.recipient_email) {
+          return messages.filter(msg => msg.recipient_email === params.recipient_email);
+        }
+
+        return messages;
+      },
+
+      create: async (messageData) => {
+        const email = getStoredEmail();
+        return await fetchAPI('/messages', {
+          method: 'POST',
+          body: JSON.stringify({
+            ...messageData,
+            created_by: messageData.created_by || email
+          }),
+        });
+      },
+
+      update: async (id, messageData) => {
+        return await fetchAPI(`/messages/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(messageData),
         });
       }
     }

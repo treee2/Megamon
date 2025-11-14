@@ -28,7 +28,7 @@ export default function Payment() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
-  const bookingId = urlParams.get('bookingId');
+  const bookingId = urlParams.get('bookingid'); // Изменено на маленькие буквы
 
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [cardNumber, setCardNumber] = useState("");
@@ -42,11 +42,16 @@ export default function Payment() {
     }
   }, [bookingId, navigate]);
 
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => base44.auth.me(),
+  });
+
   const { data: booking, isLoading: bookingLoading } = useQuery({
     queryKey: ['booking', bookingId],
     queryFn: async () => {
       const bookings = await base44.entities.Booking.filter({ id: bookingId });
-      return bookings[0];
+      return bookings[0] || null;
     },
     enabled: !!bookingId,
   });
@@ -71,12 +76,15 @@ export default function Payment() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!currentUser?.email) return;
+    
     await createPaymentMutation.mutateAsync({
       booking_id: bookingId,
       amount: booking.total_price,
       payment_method: paymentMethod,
       status: "completed",
-      transaction_id: `TXN${Date.now()}`
+      transaction_id: `TXN${Date.now()}`,
+      paid_by: currentUser.email
     });
   };
 
@@ -185,14 +193,14 @@ export default function Payment() {
                       {paymentMethods.map((method) => {
                         const Icon = method.icon;
                         return (
-                          <div
+                          <Label
                             key={method.id}
+                            htmlFor={method.id}
                             className={`flex items-start gap-4 border-2 rounded-xl p-4 cursor-pointer transition-all ${
                               paymentMethod === method.id
                                 ? 'border-indigo-600 bg-indigo-50'
                                 : 'border-slate-200 hover:border-slate-300'
                             }`}
-                            onClick={() => setPaymentMethod(method.id)}
                           >
                             <RadioGroupItem value={method.id} id={method.id} />
                             <div className="flex items-start gap-3 flex-1">
@@ -200,13 +208,13 @@ export default function Payment() {
                                 <Icon className="w-5 h-5 text-indigo-700" />
                               </div>
                               <div>
-                                <Label htmlFor={method.id} className="font-semibold text-slate-900 cursor-pointer">
+                                <span className="font-semibold text-slate-900">
                                   {method.label}
-                                </Label>
+                                </span>
                                 <p className="text-sm text-slate-600 mt-1">{method.description}</p>
                               </div>
                             </div>
-                          </div>
+                          </Label>
                         );
                       })}
                     </div>

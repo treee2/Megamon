@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, MapPin, DollarSign, User, CheckCircle2, XCircle, Clock, CreditCard, MessageSquare } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Calendar, Users, MapPin, DollarSign, User, CheckCircle2, XCircle, Clock, CreditCard, MessageSquare, Star } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +16,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import ChatWindow from "../chat/ChatWindow";
 
@@ -37,6 +40,14 @@ export default function BookingCard({ booking, apartment, showActions = false })
   const [chatDialogOpen, setChatDialogOpen] = useState(false);
   const navigate = useNavigate();
 
+  // Состояние для формы отзыва
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [cleanliness, setCleanliness] = useState(5);
+  const [communication, setCommunication] = useState(5);
+  const [location, setLocation] = useState(5);
+  const [value, setValue] = useState(5);
+
   const { data: guestUser } = useQuery({
     queryKey: ['user', booking.created_by],
     queryFn: async () => {
@@ -55,9 +66,24 @@ export default function BookingCard({ booking, apartment, showActions = false })
     queryKey: ['review', booking.id],
     queryFn: async () => {
       const reviews = await base44.entities.Review.filter({ booking_id: booking.id });
-      return reviews[0];
+      return reviews[0] || null;
     },
     enabled: !!booking.id,
+  });
+
+  const createReviewMutation = useMutation({
+    mutationFn: (reviewData) => base44.entities.Review.create(reviewData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['review', booking.id] });
+      setShowReviewForm(false);
+      setComment("");
+      setRating(5);
+      setCleanliness(5);
+      setCommunication(5);
+      setLocation(5);
+      setValue(5);
+    },
   });
 
   const updateBookingMutation = useMutation({
@@ -75,6 +101,21 @@ export default function BookingCard({ booking, apartment, showActions = false })
     updateBookingMutation.mutate({ id: booking.id, status: "cancelled" });
   };
 
+  const handleSubmitReview = (e) => {
+    e.preventDefault();
+    createReviewMutation.mutate({
+      apartment_id: apartment.id,
+      booking_id: booking.id,
+      rating,
+      comment,
+      cleanliness,
+      communication,
+      location,
+      value,
+      created_by: currentUser.email,
+    });
+  };
+
   const isOwner = currentUser?.role === 'admin' || apartment?.created_by === currentUser?.email;
   const canLeaveReview = booking.status === "completed" && 
                          !existingReview && 
@@ -82,6 +123,30 @@ export default function BookingCard({ booking, apartment, showActions = false })
 
   const chatRecipient = isOwner ? booking.created_by : apartment?.created_by;
   const chatRecipientName = isOwner ? guestUser?.full_name : "Владелец";
+
+  const StarRating = ({ value, onChange, label }) => (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">{label}</Label>
+      <div className="flex gap-1">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => onChange(star)}
+            className="transition-transform hover:scale-110"
+          >
+            <Star
+              className={`w-6 h-6 ${
+                star <= value
+                  ? 'fill-amber-400 text-amber-400'
+                  : 'text-slate-300'
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -177,7 +242,7 @@ export default function BookingCard({ booking, apartment, showActions = false })
           {booking.status === "confirmed" && booking.created_by === currentUser?.email && (
             <div className="pt-4 border-t border-slate-100">
               <Button
-                onClick={() => navigate(createPageUrl(`Payment?bookingId=${booking.id}`))}
+                onClick={() => navigate(createPageUrl(`Payment?bookingid=${booking.id}`))}
                 className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
               >
                 <CreditCard className="w-4 h-4 mr-2" />
@@ -186,13 +251,13 @@ export default function BookingCard({ booking, apartment, showActions = false })
             </div>
           )}
 
-          {canLeaveReview && !showReviewForm && (
+          {canLeaveReview && (
             <div className="pt-4 border-t border-slate-100">
               <Button
                 onClick={() => setShowReviewForm(true)}
                 className="w-full bg-amber-600 hover:bg-amber-700 text-white"
               >
-                <CheckCircle2 className="w-4 h-4 mr-2" />
+                <Star className="w-4 h-4 mr-2" />
                 Оставить отзыв
               </Button>
             </div>
@@ -235,6 +300,9 @@ export default function BookingCard({ booking, apartment, showActions = false })
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Чат по бронированию</DialogTitle>
+            <DialogDescription className="sr-only">
+              Обмен сообщениями между гостем и владельцем квартиры
+            </DialogDescription>
           </DialogHeader>
           {chatRecipient && (
             <ChatWindow
@@ -244,6 +312,85 @@ export default function BookingCard({ booking, apartment, showActions = false })
               recipientName={chatRecipientName}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Диалог для создания отзыва */}
+      <Dialog open={showReviewForm} onOpenChange={setShowReviewForm}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Оставить отзыв</DialogTitle>
+            <DialogDescription>
+              Поделитесь своим впечатлением о проживании
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmitReview} className="space-y-6">
+            <div className="space-y-4">
+              <StarRating
+                value={rating}
+                onChange={setRating}
+                label="Общая оценка"
+              />
+              
+              <StarRating
+                value={cleanliness}
+                onChange={setCleanliness}
+                label="Чистота"
+              />
+              
+              <StarRating
+                value={communication}
+                onChange={setCommunication}
+                label="Общение"
+              />
+              
+              <StarRating
+                value={location}
+                onChange={setLocation}
+                label="Расположение"
+              />
+              
+              <StarRating
+                value={value}
+                onChange={setValue}
+                label="Соотношение цена/качество"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="comment" className="text-sm font-medium mb-2 block">
+                Ваш отзыв
+              </Label>
+              <Textarea
+                id="comment"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Расскажите о вашем опыте..."
+                rows={5}
+                required
+                className="resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowReviewForm(false)}
+                className="flex-1"
+              >
+                Отмена
+              </Button>
+              <Button
+                type="submit"
+                disabled={createReviewMutation.isPending || !comment.trim()}
+                className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white"
+              >
+                {createReviewMutation.isPending ? "Отправка..." : "Опубликовать отзыв"}
+              </Button>
+            </div>
+          </form>
         </DialogContent>
       </Dialog>
     </>

@@ -55,7 +55,7 @@ router.post('/', (req, res) => {
       });
     }
     
-    const id = generateId();
+    const id = generateId('booking');
     
     // Проверяем, доступна ли квартира в выбранные даты
     const conflictCheck = db.prepare(`

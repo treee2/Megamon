@@ -73,6 +73,29 @@ function LayoutContent({ children, currentPageName }) {
     },
   });
 
+  // Получаем количество pending бронирований для текущего пользователя
+  const { data: pendingBookings } = useQuery({
+    queryKey: ['pendingBookings', user?.email],
+    queryFn: async () => {
+      if (!user?.email) return [];
+      const bookings = await base44.entities.Booking.list();
+      // Для владельца - показываем бронирования его квартир со статусом pending
+      if (user.role === 'admin') {
+        const apartments = await base44.entities.Apartment.filter({ created_by: user.email });
+        const apartmentIds = apartments.map(apt => apt.id);
+        return bookings.filter(b => 
+          apartmentIds.includes(b.apartment_id) && 
+          b.status === 'pending'
+        );
+      }
+      return [];
+    },
+    enabled: !!user?.email,
+    refetchInterval: 30000, // Обновляем каждые 30 секунд
+  });
+
+  const pendingCount = pendingBookings?.length || 0;
+
   const handleLogout = () => {
     logout();
     base44.auth.logout();
@@ -128,9 +151,14 @@ function LayoutContent({ children, currentPageName }) {
                         location.pathname === item.url ? 'bg-indigo-50 text-indigo-700 shadow-sm' : ''
                       }`}
                     >
-                      <Link to={item.url} className="flex items-center gap-3 px-4 py-3">
+                      <Link to={item.url} className="flex items-center gap-3 px-4 py-3 relative">
                         <item.icon className="w-5 h-5" />
                         {open && <span className="font-medium">{item.title}</span>}
+                        {item.title === "Мои бронирования" && pendingCount > 0 && (
+                          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                            {pendingCount}
+                          </span>
+                        )}
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

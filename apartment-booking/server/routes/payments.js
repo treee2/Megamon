@@ -67,12 +67,13 @@ router.post('/', (req, res) => {
       amount,
       payment_method,
       status = 'pending',
-      transaction_id
+      transaction_id,
+      paid_by
     } = req.body;
 
-    if (!booking_id || !amount || !payment_method) {
+    if (!booking_id || !amount || !payment_method || !paid_by) {
       return res.status(400).json({
-        error: 'Необходимо указать booking_id, amount и payment_method'
+        error: 'Необходимо указать booking_id, amount, payment_method и paid_by'
       });
     }
 
@@ -96,7 +97,7 @@ router.post('/', (req, res) => {
       payment_method,
       status,
       transaction_id || null,
-      booking.created_by
+      paid_by
     );
 
     if (status === 'completed') {

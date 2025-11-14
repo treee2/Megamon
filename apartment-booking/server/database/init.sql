@@ -1,4 +1,5 @@
 -- Удаляем таблицы, если они уже существуют (для чистого старта)
+DROP TABLE IF EXISTS messages;
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS support_tickets;
 DROP TABLE IF EXISTS reviews;
@@ -150,6 +151,24 @@ CREATE TABLE support_tickets (
     FOREIGN KEY (responded_by) REFERENCES users(email) ON DELETE SET NULL
 );
 
+-- Создаём таблицу сообщений (чат)
+CREATE TABLE messages (
+    id TEXT PRIMARY KEY,
+    text TEXT NOT NULL,
+    apartment_id TEXT,
+    booking_id TEXT,
+    recipient_email TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    is_read INTEGER DEFAULT 0,
+    created_date TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_date TEXT DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (apartment_id) REFERENCES apartments(id) ON DELETE CASCADE,
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    FOREIGN KEY (created_by) REFERENCES users(email) ON DELETE CASCADE,
+    FOREIGN KEY (recipient_email) REFERENCES users(email) ON DELETE CASCADE
+);
+
 -- Создаём индексы для ускорения поиска
 CREATE INDEX idx_apartments_available ON apartments(is_available);
 CREATE INDEX idx_apartments_price ON apartments(price_per_night);
@@ -172,6 +191,12 @@ CREATE INDEX idx_payments_status ON payments(status);
 
 CREATE INDEX idx_support_tickets_status ON support_tickets(status);
 CREATE INDEX idx_support_tickets_created_by ON support_tickets(created_by);
+
+CREATE INDEX idx_messages_apartment ON messages(apartment_id);
+CREATE INDEX idx_messages_booking ON messages(booking_id);
+CREATE INDEX idx_messages_recipient ON messages(recipient_email);
+CREATE INDEX idx_messages_created_by ON messages(created_by);
+CREATE INDEX idx_messages_is_read ON messages(is_read);
 
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_login ON users(login);

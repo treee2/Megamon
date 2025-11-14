@@ -10,6 +10,7 @@ import authRouter from './routes/auth.js';
 import reviewsRouter from './routes/reviews.js';
 import supportTicketsRouter from './routes/supportTickets.js';
 import paymentsRouter from './routes/payments.js';
+import messagesRouter from './routes/messages.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,8 +22,15 @@ const PORT = process.env.PORT || 3001;
 // Инициализируем базу данных при запуске сервера
 initDatabase();
 
-// Настраиваем middleware (промежуточные обработчики)
-app.use(cors()); // Разрешаем запросы с фронтенда
+// Настраиваем CORS для Railway
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 
 // ВАЖНО: Увеличиваем лимит размера запроса для загрузки изображений
 // 50mb - это достаточно для большинства изображений в base64
@@ -37,6 +45,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/support-tickets', supportTicketsRouter);
 app.use('/api/payments', paymentsRouter);
+app.use('/api/messages', messagesRouter);
 
 // Простой тестовый маршрут для проверки работы сервера
 app.get('/api/health', (req, res) => {
@@ -67,5 +76,7 @@ app.listen(PORT, () => {
   console.log(`  ➕ POST /api/support-tickets    - Создать обращение`);
   console.log(`  💳 GET  /api/payments           - Список оплат`);
   console.log(`  ➕ POST /api/payments           - Создать оплату`);
+  console.log(`  💬 GET  /api/messages           - Список сообщений`);
+  console.log(`  ➕ POST /api/messages           - Отправить сообщение`);
   console.log('═══════════════════════════════════════════════');
 });
