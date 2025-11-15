@@ -11,7 +11,7 @@ cd /app
 # Запускаем бэкенд сервер в фоне
 echo "📡 Запуск бэкенд сервера..."
 cd apartment-booking/server
-npm run dev:server &
+npm run dev &
 BACKEND_PID=$!
 echo "✅ Бэкенд запущен с PID: $BACKEND_PID"
 
