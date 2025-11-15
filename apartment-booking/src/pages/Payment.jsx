@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import {
   CreditCard,
   Banknote,
@@ -23,17 +24,19 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
+import StripeCheckoutForm from "@/components/StripeCheckoutForm";
+
+// Инициализация Stripe (замените на ваш публичный ключ)
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 export default function Payment() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const urlParams = new URLSearchParams(window.location.search);
-  const bookingId = urlParams.get('bookingid'); // Изменено на маленькие буквы
+  const bookingId = urlParams.get('bookingid');
 
   const [paymentMethod, setPaymentMethod] = useState("card");
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
 
   // Автоматически перенаправляем если нет ID
   useEffect(() => {
@@ -65,6 +68,50 @@ export default function Payment() {
     enabled: !!booking?.apartment_id,
   });
 
+  // Создание Payment Intent при выборе оплаты картой
+  useEffect(() => {
+    if (paymentMethod === "card" && booking && !clientSecret) {
+      console.log('🔄 Создание Payment Intent для бронирования:', bookingId);
+      createPaymentIntent();
+    }
+  }, [paymentMethod, booking]);
+
+  const createPaymentIntent = async () => {
+    try {
+      // Добавляем комиссию 1%
+      const totalWithFee = booking.total_price * 1.01;
+      
+      console.log('📤 Отправка запроса на создание Payment Intent');
+      console.log('Booking ID:', bookingId);
+      console.log('Сумма без комиссии:', booking.total_price);
+      console.log('Сумма с комиссией 1%:', totalWithFee);
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/payments/create-payment-intent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          booking_id: bookingId,
+          amount: totalWithFee,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Ошибка от сервера:', errorData);
+        throw new Error(errorData.error || 'Не удалось создать Payment Intent');
+      }
+      
+      const data = await response.json();
+      console.log('✅ Payment Intent создан:', data);
+      setClientSecret(data.clientSecret);
+    } catch (error) {
+      console.error('❌ Ошибка при создании Payment Intent:', error);
+      alert('Не удалось инициализировать оплату: ' + error.message);
+    }
+  };
+
   const createPaymentMutation = useMutation({
     mutationFn: (paymentData) => base44.entities.Payment.create(paymentData),
     onSuccess: () => {
@@ -78,9 +125,12 @@ export default function Payment() {
     
     if (!currentUser?.email) return;
     
+    // Добавляем комиссию 1%
+    const totalWithFee = booking.total_price * 1.01;
+    
     await createPaymentMutation.mutateAsync({
       booking_id: bookingId,
-      amount: booking.total_price,
+      amount: totalWithFee,
       payment_method: paymentMethod,
       status: "completed",
       transaction_id: `TXN${Date.now()}`,
@@ -222,69 +272,39 @@ export default function Payment() {
                 </CardContent>
               </Card>
 
-              {paymentMethod === "card" && (
+              {paymentMethod === "card" && clientSecret && (
                 <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg">
                   <CardHeader>
                     <CardTitle className="text-xl">Данные карты</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="cardNumber">Номер карты</Label>
-                      <Input
-                        id="cardNumber"
-                        value={cardNumber}
-                        onChange={(e) => setCardNumber(e.target.value)}
-                        placeholder="1234 5678 9012 3456"
-                        maxLength={19}
-                        className="mt-2"
-                        required
+                  <CardContent>
+                    <Elements stripe={stripePromise} options={{ clientSecret }}>
+                      <StripeCheckoutForm 
+                        bookingId={bookingId} 
+                        amount={booking.total_price * 1.01}
+                        onSuccess={() => navigate(createPageUrl("MyBookings"))}
                       />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="cardExpiry">Срок действия</Label>
-                        <Input
-                          id="cardExpiry"
-                          value={cardExpiry}
-                          onChange={(e) => setCardExpiry(e.target.value)}
-                          placeholder="MM/YY"
-                          maxLength={5}
-                          className="mt-2"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="cardCvv">CVV</Label>
-                        <Input
-                          id="cardCvv"
-                          type="password"
-                          value={cardCvv}
-                          onChange={(e) => setCardCvv(e.target.value)}
-                          placeholder="123"
-                          maxLength={3}
-                          className="mt-2"
-                          required
-                        />
-                      </div>
-                    </div>
+                    </Elements>
                   </CardContent>
                 </Card>
               )}
 
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold py-6 text-lg shadow-lg shadow-indigo-500/30"
-                disabled={createPaymentMutation.isPending}
-              >
-                {createPaymentMutation.isPending ? (
-                  "Обработка..."
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Оплатить {booking.total_price?.toLocaleString('ru-RU')} ₽
-                  </>
-                )}
-              </Button>
+              {paymentMethod !== "card" && (
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold py-6 text-lg shadow-lg shadow-indigo-500/30"
+                  disabled={createPaymentMutation.isPending}
+                >
+                  {createPaymentMutation.isPending ? (
+                    "Обработка..."
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 mr-2" />
+                      Подтвердить {paymentMethod === 'cash' ? 'оплату наличными' : 'банковский перевод'}
+                    </>
+                  )}
+                </Button>
+              )}
             </form>
           </div>
 
@@ -341,9 +361,17 @@ export default function Payment() {
                     <span className="text-slate-600">Статус</span>
                     <Badge className="bg-green-100 text-green-800">Подтверждено</Badge>
                   </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-slate-600">Стоимость бронирования</span>
+                    <span>{booking.total_price?.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-slate-600">Комиссия сервиса (1%)</span>
+                    <span>{(booking.total_price * 0.01).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽</span>
+                  </div>
                   <div className="flex justify-between items-center text-lg font-bold pt-3 border-t border-slate-200">
                     <span>Итого к оплате</span>
-                    <span className="text-indigo-700">{booking.total_price?.toLocaleString('ru-RU')} ₽</span>
+                    <span className="text-indigo-700">{(booking.total_price * 1.01).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽</span>
                   </div>
                 </div>
               </CardContent>

@@ -140,12 +140,16 @@ export default function ApartmentDetails() {
     e.preventDefault();
     if (!checkIn || !checkOut || !datesAvailable || !user?.email) return;
 
+    // Добавляем комиссию 1% к общей стоимости
+    const basePrice = calculateTotalPrice();
+    const totalWithFee = basePrice * 1.01;
+
     await createBookingMutation.mutateAsync({
       apartment_id: apartmentId,
       check_in: format(checkIn, 'yyyy-MM-dd'),
       check_out: format(checkOut, 'yyyy-MM-dd'),
       guests,
-      total_price: calculateTotalPrice(),
+      total_price: totalWithFee,
       special_requests: specialRequests,
       created_by: user.email,
       status: "pending"
@@ -415,9 +419,15 @@ export default function ApartmentDetails() {
                           {(apartment.price_per_night * nights).toLocaleString('ru-RU')} ₽
                         </span>
                       </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">Комиссия сервиса (1%)</span>
+                        <span className="font-semibold">
+                          {(apartment.price_per_night * nights * 0.01).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽
+                        </span>
+                      </div>
                       <div className="flex justify-between text-lg font-bold pt-2 border-t border-indigo-200">
                         <span>Итого</span>
-                        <span>{calculateTotalPrice().toLocaleString('ru-RU')} ₽</span>
+                        <span>{(calculateTotalPrice() * 1.01).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽</span>
                       </div>
                     </div>
                   )}

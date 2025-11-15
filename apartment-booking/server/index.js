@@ -12,6 +12,7 @@ import supportTicketsRouter from './routes/supportTickets.js';
 import paymentsRouter from './routes/payments.js';
 import messagesRouter from './routes/messages.js';
 
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -46,6 +47,7 @@ app.use('/api/reviews', reviewsRouter);
 app.use('/api/support-tickets', supportTicketsRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/messages', messagesRouter);
+
 
 // Простой тестовый маршрут для проверки работы сервера
 app.get('/api/health', (req, res) => {

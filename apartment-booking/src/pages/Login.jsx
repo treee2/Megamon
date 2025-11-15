@@ -40,6 +40,22 @@ export default function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Валидация email (если введен email, а не логин)
+    if (loginData.login.includes('@')) {
+      const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailRegex.test(loginData.login)) {
+        setError("Введите корректный email адрес");
+        return;
+      }
+    }
+
+    // Проверка на пустые поля
+    if (!loginData.login.trim() || !loginData.password.trim()) {
+      setError("Заполните все поля");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -58,22 +74,58 @@ export default function Login() {
     e.preventDefault();
     setError("");
 
-    // Валидация
-    if (registerData.password !== registerData.confirmPassword) {
-      setError("Пароли не совпадают");
+    // Проверка на пустые обязательные поля
+    if (!registerData.login.trim() || !registerData.email.trim() || 
+        !registerData.password.trim() || !registerData.full_name.trim()) {
+      setError("Заполните все обязательные поля");
       return;
     }
 
+    // Валидация логина
+    if (registerData.login.length < 3) {
+      setError("Логин должен содержать минимум 3 символа");
+      return;
+    }
+
+    // Валидация имени
+    if (registerData.full_name.length < 2) {
+      setError("Введите полное имя (минимум 2 символа)");
+      return;
+    }
+
+    // Улучшенная валидация email
+    const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(registerData.email)) {
+      setError("Введите корректный email адрес (например: user@example.com)");
+      return;
+    }
+
+    // Проверка на слишком короткий домен
+    const emailDomain = registerData.email.split('@')[1];
+    if (emailDomain && emailDomain.length < 5) {
+      setError("Email адрес выглядит некорректным. Проверьте домен");
+      return;
+    }
+
+    // Валидация пароля
     if (registerData.password.length < 6) {
       setError("Пароль должен содержать минимум 6 символов");
       return;
     }
 
-    // Простая валидация email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(registerData.email)) {
-      setError("Введите корректный email");
+    // Проверка совпадения паролей
+    if (registerData.password !== registerData.confirmPassword) {
+      setError("Пароли не совпадают");
       return;
+    }
+
+    // Валидация телефона (если заполнен)
+    if (registerData.phone && registerData.phone.trim()) {
+      const phoneRegex = /^[\d\s\+\-\(\)]+$/;
+      if (!phoneRegex.test(registerData.phone) || registerData.phone.replace(/\D/g, '').length < 10) {
+        setError("Введите корректный номер телефона");
+        return;
+      }
     }
 
     setIsLoading(true);

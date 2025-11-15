@@ -49,6 +49,7 @@ import Moderation from './pages/Moderation';
 import Support from './pages/Support';
 import SupportAdmin from './pages/SupportAdmin';
 import Payment from './pages/Payment';
+import TelegramChannel from './pages/TelegramChannel';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -188,6 +189,17 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout currentPageName="Payment">
               <Payment />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/telegram"
+        element={
+          <ProtectedRoute>
+            <Layout currentPageName="TelegramChannel">
+              <TelegramChannel />
             </Layout>
           </ProtectedRoute>
         }

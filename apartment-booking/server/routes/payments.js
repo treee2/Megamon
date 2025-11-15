@@ -1,6 +1,7 @@
 import express from 'express';
 import db from '../database/db.js';
 import { generateId } from '../utils/helpers.js';
+import stripe from '../utils/stripe.js';
 
 const router = express.Router();
 
@@ -59,6 +60,46 @@ router.get('/:id', (req, res) => {
   }
 });
 
+// Создать намерение оплаты Stripe (Payment Intent)
+router.post('/create-payment-intent', async (req, res) => {
+  try {
+    const { booking_id, amount } = req.body;
+
+    if (!booking_id || !amount) {
+      return res.status(400).json({
+        error: 'Необходимо указать booking_id и amount'
+      });
+    }
+
+    // Проверяем существование бронирования
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(booking_id);
+    if (!booking) {
+      return res.status(404).json({ error: 'Бронирование не найдено' });
+    }
+
+    // Создаем Payment Intent в Stripe
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Stripe работает с копейками/центами
+      currency: 'rub',
+      metadata: {
+        booking_id: booking_id,
+        user_email: booking.created_by
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id
+    });
+  } catch (error) {
+    console.error('Ошибка при создании Payment Intent:', error);
+    res.status(500).json({ error: 'Ошибка сервера: ' + error.message });
+  }
+});
+
 // Создать оплату
 router.post('/', (req, res) => {
   try {
@@ -113,6 +154,70 @@ router.post('/', (req, res) => {
     console.error('Ошибка при создании оплаты:', error);
     res.status(500).json({ error: 'Ошибка сервера: ' + error.message });
   }
+});
+
+// Webhook для обработки событий Stripe
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error('Ошибка webhook:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Обработка событий
+  switch (event.type) {
+    case 'payment_intent.succeeded':
+      const paymentIntent = event.data.object;
+      console.log('PaymentIntent успешно завершен:', paymentIntent.id);
+      
+      // Обновляем статус оплаты в БД
+      const bookingId = paymentIntent.metadata.booking_id;
+      if (bookingId) {
+        try {
+          const paymentId = generateId('payment');
+          
+          db.prepare(`
+            INSERT INTO payments (
+              id, booking_id, amount, payment_method, status, transaction_id, paid_by
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            paymentId,
+            bookingId,
+            paymentIntent.amount / 100,
+            'card',
+            'completed',
+            paymentIntent.id,
+            paymentIntent.metadata.user_email
+          );
+
+          db.prepare(`
+            UPDATE bookings SET status = 'completed', updated_date = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).run(bookingId);
+        } catch (error) {
+          console.error('Ошибка при обновлении оплаты:', error);
+        }
+      }
+      break;
+
+    case 'payment_intent.payment_failed':
+      const failedPayment = event.data.object;
+      console.log('Оплата не удалась:', failedPayment.id);
+      break;
+
+    default:
+      console.log(`Необработанный тип события: ${event.type}`);
+  }
+
+  res.json({ received: true });
 });
 
 export default router;
